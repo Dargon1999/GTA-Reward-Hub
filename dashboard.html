@@ -6,7 +6,6 @@
     <title>GTA Reward Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
     <style>
         body {
             font-family: 'Orbitron', sans-serif;
@@ -115,7 +114,7 @@
             opacity: 0.5;
             pointer-events: none;
         }
-        input[type="text"], input[type="number"] {
+        input[type="text"], input[type="number"], input[type="file"] {
             font-size: 0.9rem;
             padding: 8px;
         }
@@ -161,6 +160,9 @@
             <button onclick="scrollToCases()" class="bg-purple-600 pulse text-sm rounded-lg">
                 <img src="https://img.icons8.com/color/24/gift.png" alt="Case" class="task-icon inline"> Кейсы
             </button>
+            <button onclick="exportUserData()" class="bg-blue-600 pulse text-sm rounded-lg">
+                <img src="https://img.icons8.com/color/24/download.png" alt="Export" class="task-icon inline"> Экспорт данных
+            </button>
         </div>
 
         <div class="bg-gray-800 p-6 rounded-xl shadow-2xl mb-8 bg-opacity-85">
@@ -189,6 +191,11 @@
                 <div>
                     <label class="block text-sm mb-2">Удалить игрока:</label>
                     <button onclick="deleteUser()" class="bg-red-600 p-2 rounded-lg mt-2 w-full text-sm pulse">Удалить</button>
+                </div>
+                <div>
+                    <label class="block text-sm mb-2">Импортировать данные пользователя:</label>
+                    <input type="file" id="importUserData" accept=".json" class="bg-gray-700 text-white p-2 rounded-lg mt-2 w-full text-sm">
+                    <button onclick="importUserData()" class="bg-blue-600 p-2 rounded-lg mt-2 w-full text-sm pulse">Импортировать</button>
                 </div>
                 <div>
                     <label class="block text-sm mb-2">Изменить баллы за задание:</label>
@@ -377,6 +384,14 @@
                 completedTasks: user.completedTasks,
                 completedTasksToday: completedTasksToday
             }));
+            const playerIndex = leaderboard.findIndex(p => p.discordId === user.discordId);
+            if (playerIndex >= 0) {
+                leaderboard[playerIndex].points = user.points;
+                leaderboard[playerIndex].completedTasks = user.completedTasks;
+            } else {
+                leaderboard.push({ discordId: user.discordId, points: user.points, completedTasks: user.completedTasks });
+            }
+            updateLeaderboard();
         }
 
         function isNewDay() {
@@ -436,15 +451,21 @@
 
             // Загрузка зарегистрированных пользователей в leaderboard
             leaderboard = [];
-            Object.keys(localStorage).filter(key => key.startsWith('user_')).forEach(key => {
-                const userData = JSON.parse(localStorage.getItem(key));
-                const userStats = JSON.parse(localStorage.getItem('userData_' + key.replace('user_', ''))) || {};
-                leaderboard.push({
-                    discordId: userData.discord,
-                    points: userStats.points || 0,
-                    completedTasks: userStats.completedTasks || 0
+            Object.keys(localStorage)
+                .filter(key => key.startsWith('user_'))
+                .forEach(key => {
+                    const userData = JSON.parse(localStorage.getItem(key));
+                    const userStats = JSON.parse(localStorage.getItem('userData_' + key.replace('user_', ''))) || {
+                        points: 0,
+                        completedTasks: 0,
+                        completedTasksToday: []
+                    };
+                    leaderboard.push({
+                        discordId: userData.discord,
+                        points: userStats.points || 0,
+                        completedTasks: userStats.completedTasks || 0
+                    });
                 });
-            });
 
             await loadTasks();
 
@@ -545,6 +566,7 @@
         function updateLeaderboard() {
             const leaderboardBody = document.getElementById("leaderboard");
             leaderboardBody.innerHTML = "";
+            leaderboard.sort((a, b) => b.points - a.points);
             leaderboard.forEach(player => {
                 const row = document.createElement("tr");
                 row.innerHTML = `
@@ -565,13 +587,19 @@
             caseSelect.innerHTML = "";
             playerSelect.innerHTML = "";
 
-            Object.keys(localStorage).filter(key => key.startsWith('user_')).forEach(key => {
-                const userData = JSON.parse(localStorage.getItem(key));
-                const option = document.createElement("option");
-                option.value = key.replace('user_', '');
-                option.textContent = userData.discord;
-                playerSelect.appendChild(option);
-            });
+            Object.keys(localStorage)
+                .filter(key => key.startsWith('user_'))
+                .forEach(key => {
+                    const userData = JSON.parse(localStorage.getItem(key));
+                    const userStats = JSON.parse(localStorage.getItem('userData_' + key.replace('user_', ''))) || {
+                        points: 0,
+                        completedTasks: 0
+                    };
+                    const option = document.createElement("option");
+                    option.value = key.replace('user_', '');
+                    option.textContent = `${userData.discord} (Баллы: ${userStats.points}, Задания: ${userStats.completedTasks})`;
+                    playerSelect.appendChild(option);
+                });
 
             tasks.forEach(task => {
                 const option = document.createElement("option");
@@ -854,6 +882,7 @@
             }
             updateLeaderboard();
             saveUserData();
+            if (user.isAdmin) populateAdminDropdowns();
         }
 
         function updateTask() {
@@ -904,27 +933,38 @@
                 saveUserData();
             }
             alert(`Лимит дополнительных заданий сброшен для ${selectedUsername}`);
+            if (user.isAdmin) populateAdminDropdowns();
         }
 
         function adjustUserPoints() {
             const selectedUsername = document.getElementById("playerSelect").value;
             const points = parseInt(document.getElementById("userPoints").value);
+            if (isNaN(points)) {
+                alert("Введите корректное количество баллов!");
+                return;
+            }
+            const userData = JSON.parse(localStorage.getItem('userData_' + selectedUsername)) || {
+                points: 0,
+                dailyPoints: 0,
+                completedTasks: 0
+            };
+            userData.points = (userData.points || 0) + points;
+            userData.dailyPoints = (userData.dailyPoints || 0) + points;
+            localStorage.setItem('userData_' + selectedUsername, JSON.stringify(userData));
+
             if (selectedUsername === user.username) {
-                user.points += points;
-                user.dailyPoints += points;
+                user.points = userData.points;
+                user.dailyPoints = userData.dailyPoints;
                 updatePoints();
             } else {
                 const playerIndex = leaderboard.findIndex(p => p.discordId === JSON.parse(localStorage.getItem('user_' + selectedUsername)).discord);
                 if (playerIndex >= 0) {
-                    leaderboard[playerIndex].points += points;
+                    leaderboard[playerIndex].points = userData.points;
                     updateLeaderboard();
-                    const userData = JSON.parse(localStorage.getItem('userData_' + selectedUsername)) || {};
-                    userData.points = (userData.points || 0) + points;
-                    userData.dailyPoints = (userData.dailyPoints || 0) + points;
-                    localStorage.setItem('userData_' + selectedUsername, JSON.stringify(userData));
                 }
             }
             alert(`Баллы изменены на ${points} для ${selectedUsername}`);
+            if (user.isAdmin) populateAdminDropdowns();
         }
 
         function deleteUser() {
@@ -934,14 +974,45 @@
                 return;
             }
             if (confirm(`Вы уверены, что хотите удалить пользователя ${selectedUsername}?`)) {
+                const userData = JSON.parse(localStorage.getItem('user_' + selectedUsername));
                 localStorage.removeItem('user_' + selectedUsername);
                 localStorage.removeItem('userData_' + selectedUsername);
                 localStorage.removeItem('lastAutoPoints_' + selectedUsername);
                 localStorage.removeItem('lastDate_' + selectedUsername);
-                leaderboard = leaderboard.filter(p => p.discordId !== JSON.parse(localStorage.getItem('user_' + selectedUsername)?.discord));
+                leaderboard = leaderboard.filter(p => p.discordId !== userData.discord);
                 updateLeaderboard();
-                populateAdminDropdowns();
+                if (user.isAdmin) populateAdminDropdowns();
                 alert(`Пользователь ${selectedUsername} удален`);
+            }
+        }
+
+        function exportUserData() {
+            const userData = localStorage.getItem('userData_' + user.username);
+            const blob = new Blob([userData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `userData_${user.username}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            alert("Данные экспортированы! Отправьте файл админу.");
+        }
+
+        function importUserData() {
+            const fileInput = document.getElementById("importUserData");
+            const file = fileInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const userData = JSON.parse(e.target.result);
+                    const username = file.name.replace('userData_', '').replace('.json', '');
+                    localStorage.setItem('userData_' + username, JSON.stringify(userData));
+                    alert(`Данные пользователя ${username} импортированы!`);
+                    init(); // Перезагрузка данных
+                };
+                reader.readAsText(file);
+            } else {
+                alert("Выберите файл для импорта!");
             }
         }
 
