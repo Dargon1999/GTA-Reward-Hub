@@ -3,10 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Вход / Регистрация - GTA Reward Hub</title>
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
+  <title>Вход / Регистрация</title>
   <style>
     * {
       box-sizing: border-box;
@@ -137,130 +134,91 @@
     <div class="toggle-link" id="toggleForms">Нет аккаунта? Зарегистрироваться</div>
   </div>
 
-  <script>
-    // Инициализация Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyB1mslTxZ0NqoJnRlvU4U6xHcvtntila1c",
-      authDomain: "gta-reward-hub.firebaseapp.com",
-      projectId: "gta-reward-hub",
-      storageBucket: "gta-reward-hub.firebasestorage.app",
-      messagingSenderId: "590934091264",
-      appId: "1:590934091264:web:9a242f1acfd42f252cdae5",
-      measurementId: "G-XYR3TT8CS6"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+<script>
+  const loginForm = document.getElementById('loginForm');
+  const registerForm = document.getElementById('registerForm');
+  const toggleForms = document.getElementById('toggleForms');
+  const formTitle = document.getElementById('formTitle');
+  const loginMessage = document.getElementById('loginMessage');
+  const registerMessage = document.getElementById('registerMessage');
 
-    const loginForm = document.getElementById('loginForm');
-    const registerForm = document.getElementById('registerForm');
-    const toggleForms = document.getElementById('toggleForms');
-    const formTitle = document.getElementById('formTitle');
-    const loginMessage = document.getElementById('loginMessage');
-    const registerMessage = document.getElementById('registerMessage');
+  const validCodes = ['gta5rp2025', 'admin_gta5rp2025'];
 
-    const validCodes = ['gta5rp2025', 'admin_gta5rp2025'];
+  toggleForms.onclick = () => {
+    if (loginForm.style.display !== 'none') {
+      loginForm.style.display = 'none';
+      registerForm.style.display = 'block';
+      formTitle.textContent = 'Регистрация';
+      toggleForms.textContent = 'Есть аккаунт? Войти';
+      loginMessage.textContent = '';
+      registerMessage.textContent = '';
+    } else {
+      loginForm.style.display = 'block';
+      registerForm.style.display = 'none';
+      formTitle.textContent = 'Вход';
+      toggleForms.textContent = 'Нет аккаунта? Зарегистрироваться';
+      loginMessage.textContent = '';
+      registerMessage.textContent = '';
+    }
+  };
 
-    toggleForms.onclick = () => {
-      if (loginForm.style.display !== 'none') {
-        loginForm.style.display = 'none';
-        registerForm.style.display = 'block';
-        formTitle.textContent = 'Регистрация';
-        toggleForms.textContent = 'Есть аккаунт? Войти';
-        loginMessage.textContent = '';
-        registerMessage.textContent = '';
-      } else {
-        loginForm.style.display = 'block';
-        registerForm.style.display = 'none';
-        formTitle.textContent = 'Вход';
-        toggleForms.textContent = 'Нет аккаунта? Зарегистрироваться';
-        loginMessage.textContent = '';
-        registerMessage.textContent = '';
-      }
-    };
+  registerForm.onsubmit = e => {
+    e.preventDefault();
 
-    registerForm.onsubmit = async (e) => {
-      e.preventDefault();
+    const username = document.getElementById('registerUsername').value.trim();
+    const password = document.getElementById('registerPassword').value.trim();
+    const discord = document.getElementById('registerDiscord').value.trim();
+    const code = document.getElementById('registerCode').value.trim();
 
-      const username = document.getElementById('registerUsername').value.trim();
-      const password = document.getElementById('registerPassword').value.trim();
-      const discord = document.getElementById('registerDiscord').value.trim();
-      const code = document.getElementById('registerCode').value.trim();
+    if (!validCodes.includes(code)) {
+      registerMessage.textContent = 'Неверный регистрационный код';
+      return;
+    }
+    if (localStorage.getItem('user_' + username)) {
+      registerMessage.textContent = 'Пользователь с таким никнеймом уже существует';
+      return;
+    }
 
-      if (!validCodes.includes(code)) {
-        registerMessage.textContent = 'Неверный регистрационный код';
-        return;
-      }
+    const userData = { password, discord, code };
+    localStorage.setItem('user_' + username, JSON.stringify(userData));
 
-      try {
-        const userRef = db.collection('users').doc(username);
-        const userDoc = await userRef.get();
-        if (userDoc.exists) {
-          registerMessage.textContent = 'Пользователь с таким никнеймом уже существует';
-          return;
-        }
+    registerMessage.style.color = '#8de8b3';
+    registerMessage.textContent = 'Регистрация прошла успешно! Теперь войдите.';
 
-        await userRef.set({
-          username,
-          password,
-          discord,
-          code,
-          points: 0,
-          dailyPoints: 0,
-          dailyLimit: 8000,
-          taskReplaces: 0,
-          lastReplaceDate: null,
-          extraTasksToday: 0,
-          lastExtraTaskDate: null,
-          completedTasks: 0,
-          completedTasksToday: [],
-          isAdmin: code === 'admin_gta5rp2025'
-        });
+    setTimeout(() => {
+      registerForm.reset();
+      toggleForms.click();
+      registerMessage.textContent = '';
+    }, 1500);
+  };
 
-        registerMessage.style.color = '#8de8b3';
-        registerMessage.textContent = 'Регистрация прошла успешно! Теперь войдите.';
+  loginForm.onsubmit = e => {
+    e.preventDefault();
 
-        setTimeout(() => {
-          registerForm.reset();
-          toggleForms.click();
-          registerMessage.textContent = '';
-        }, 1500);
-      } catch (error) {
-        registerMessage.textContent = 'Ошибка регистрации: ' + error.message;
-      }
-    };
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
 
-    loginForm.onsubmit = async (e) => {
-      e.preventDefault();
+    const userStr = localStorage.getItem('user_' + username);
+    if (!userStr) {
+      loginMessage.textContent = 'Пользователь не найден';
+      return;
+    }
 
-      const username = document.getElementById('loginUsername').value.trim();
-      const password = document.getElementById('loginPassword').value.trim();
+    const userData = JSON.parse(userStr);
+    if (password !== userData.password) {
+      loginMessage.textContent = 'Неверный пароль';
+      return;
+    }
 
-      try {
-        const userRef = db.collection('users').doc(username);
-        const userDoc = await userRef.get();
-        if (!userDoc.exists) {
-          loginMessage.textContent = 'Пользователь не найден';
-          return;
-        }
+    localStorage.setItem('loggedInUser', username); // Сохранение текущего пользователя
 
-        const userData = userDoc.data();
-        if (password !== userData.password) {
-          loginMessage.textContent = 'Неверный пароль';
-          return;
-        }
+    loginMessage.style.color = '#8de8b3';
+    loginMessage.textContent = `Вход выполнен! Перенаправление...`;
 
-        localStorage.setItem('loggedInUser', username);
-
-        loginMessage.style.color = '#8de8b3';
-        loginMessage.textContent = `Вход выполнен! Перенаправление...`;
-
-        setTimeout(() => {
-          window.location.href = 'dashboard.html';
-        }, 1000);
-      } catch (error) {
-        loginMessage.textContent = 'Ошибка входа: ' + error.message;
-      }
-    };
-  </script>
+    setTimeout(() => {
+      window.location.href = 'dashboard.html';
+    }, 1000);
+  };
+</script>
 </body>
 </html>
