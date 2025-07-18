@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GTA Reward Hub</title>
+    <title>Дашборд - Баллы и Кейсы</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
     <style>
         body {
             font-family: 'Orbitron', sans-serif;
@@ -79,15 +82,6 @@
             box-shadow: 0 0 30px rgba(18, 197, 107, 0.5);
             animation: fadeIn 0.3s ease-in;
         }
-        .full-screen-modal {
-            max-width: 100%;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-radius: 0;
-        }
         .leaderboard-table {
             width: 100%;
             border-collapse: collapse;
@@ -114,7 +108,7 @@
             opacity: 0.5;
             pointer-events: none;
         }
-        input[type="text"], input[type="number"], input[type="file"] {
+        input[type="text"], input[type="number"] {
             font-size: 0.9rem;
             padding: 8px;
         }
@@ -147,7 +141,7 @@
     <div class="container mx-auto p-6 max-w-6xl">
         <h1 class="text-4xl font-bold text-center mb-8 text-[#e0ffe8] drop-shadow-lg flex items-center justify-center">
             <img src="https://img.icons8.com/color/24/dashboard-layout.png" alt="Dashboard" class="task-icon mr-2">
-            GTA Reward Hub
+            Дашборд - Баллы и Кейсы
         </h1>
 
         <div class="flex justify-center space-x-4 mb-8">
@@ -159,9 +153,6 @@
             </button>
             <button onclick="scrollToCases()" class="bg-purple-600 pulse text-sm rounded-lg">
                 <img src="https://img.icons8.com/color/24/gift.png" alt="Case" class="task-icon inline"> Кейсы
-            </button>
-            <button onclick="exportUserData()" class="bg-blue-600 pulse text-sm rounded-lg">
-                <img src="https://img.icons8.com/color/24/download.png" alt="Export" class="task-icon inline"> Экспорт данных
             </button>
         </div>
 
@@ -189,16 +180,7 @@
                     <button onclick="adjustUserPoints()" class="bg-blue-600 p-2 rounded-lg mt-2 w-full text-sm pulse">Изменить</button>
                 </div>
                 <div>
-                    <label class="block text-sm mb-2">Удалить игрока:</label>
-                    <button onclick="deleteUser()" class="bg-red-600 p-2 rounded-lg mt-2 w-full text-sm pulse">Удалить</button>
-                </div>
-                <div>
-                    <label class="block text-sm mb-2">Импортировать данные пользователя:</label>
-                    <input type="file" id="importUserData" accept=".json" class="bg-gray-700 text-white p-2 rounded-lg mt-2 w-full text-sm">
-                    <button onclick="importUserData()" class="bg-blue-600 p-2 rounded-lg mt-2 w-full text-sm pulse">Импортировать</button>
-                </div>
-                <div>
-                    <label class="block text-sm mb-2">Изменить баллы за задание:</label>
+                    <label class="block text-sm mb-2">Изменить задание:</label>
                     <select id="taskSelect" class="bg-gray-700 text-white p-2 rounded-lg w-full text-sm"></select>
                     <input id="newTaskName" type="text" placeholder="Новое название" class="bg-gray-700 text-white p-2 rounded-lg mt-2 w-full text-sm">
                     <input id="newTaskCategory" type="text" placeholder="Новая категория" class="bg-gray-700 text-white p-2 rounded-lg mt-2 w-full text-sm">
@@ -218,6 +200,10 @@
                     <label class="block text-sm mb-2">Сбросить лимит доп. заданий для игрока:</label>
                     <button onclick="resetExtraTaskLimit()" class="bg-yellow-600 p-2 rounded-lg mt-2 w-full text-sm pulse">Сбросить лимит</button>
                 </div>
+                <div>
+                    <label class="block text-sm mb-2">Удалить игрока:</label>
+                    <button onclick="deleteUser()" class="bg-red-600 p-2 rounded-lg mt-2 w-full text-sm pulse">Удалить</button>
+                </div>
             </div>
         </div>
 
@@ -226,12 +212,6 @@
                 <img src="https://img.icons8.com/color/24/task.png" alt="Tasks" class="task-icon"> Задания
             </h2>
             <div id="tasks" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-        </div>
-
-        <div class="bg-gray-800 p-6 rounded-xl shadow-2xl mb-8 bg-opacity-85">
-            <h2 class="text-2xl font-semibold mb-4 text-[#e0ffe8] flex items-center">
-                <img src="https://img.icons8.com/color/24/star.png" alt="Extra Tasks" class="task-icon"> Дополнительные задания
-            </h2>
             <div id="extraTask" class="mt-4"></div>
             <button id="replaceTask" class="bg-yellow-600 p-2 rounded-lg mt-4 w-full text-sm pulse" onclick="replaceTask()">
                 <img src="https://img.icons8.com/color/24/refresh.png" alt="Replace" class="task-icon inline"> Заменить задание (1 раз бесплатно в день)
@@ -270,7 +250,7 @@
         </div>
 
         <div id="caseViewModal" class="modal">
-            <div class="modal-content" id="caseViewModalContent">
+            <div class="modal-content">
                 <h2 class="text-xl font-semibold mb-4" id="caseViewTitle"></h2>
                 <img id="caseViewImage" src="" alt="Case" class="mx-auto mb-4 w-32 h-32 object-cover rounded-lg">
                 <p class="text-sm mb-4">Стоимость: <span id="caseViewCost"></span> баллов</p>
@@ -285,6 +265,19 @@
     </div>
 
     <script>
+        // Инициализация Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyB1mslTxZ0NqoJnRlvU4U6xHcvtntila1c",
+            authDomain: "gta-reward-hub.firebaseapp.com",
+            projectId: "gta-reward-hub",
+            storageBucket: "gta-reward-hub.firebasestorage.app",
+            messagingSenderId: "590934091264",
+            appId: "1:590934091264:web:9a242f1acfd42f252cdae5",
+            measurementId: "G-XYR3TT8CS6"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
         let user = {
             points: 0,
             dailyPoints: 0,
@@ -294,6 +287,7 @@
             extraTasksToday: 0,
             lastExtraTaskDate: null,
             completedTasks: 0,
+            completedTasksToday: [],
             isAdmin: false,
             discordId: "",
             username: ""
@@ -301,8 +295,9 @@
 
         let tasks = [];
         let extraTask = null;
-        let completedTasksToday = [];
-        let cases = [
+        let leaderboard = [];
+
+        const cases = [
             { id: 1, name: "Денежный кейс 1", cost: 25000, items: ["$100", "$200", "$300", "$400", "$500", "$600", "$700", "$800", "$900", "$1000"], winRate: 100, image: "https://img.icons8.com/color/96/money-bag.png" },
             { id: 2, name: "Кейс с доп. заданиями", cost: 0, items: [], winRate: 100, image: "https://img.icons8.com/color/96/task.png" },
             { id: 3, name: "Денежный кейс 2", cost: 35000, items: ["$1000", "$1500", "$2000", "$2500", "$3000", "$3500", "$4000", "$4500", "$5000", "$5500"], winRate: 100, image: "https://img.icons8.com/color/96/safe.png" },
@@ -322,8 +317,6 @@
                 "Ford Transit 2011"
             ], winRate: 100, image: "https://img.icons8.com/color/96/car.png" }
         ];
-
-        let leaderboard = [];
 
         async function loadTasks() {
             try {
@@ -358,67 +351,101 @@
             tasks = tasks.sort(() => Math.random() - 0.5).slice(0, 6);
         }
 
-        function loadUserData() {
-            const savedUser = localStorage.getItem('userData_' + user.username);
-            if (savedUser) {
-                const saved = JSON.parse(savedUser);
-                user.points = saved.points || 0;
-                user.dailyPoints = saved.dailyPoints || 0;
-                user.taskReplaces = saved.taskReplaces || 0;
-                user.lastReplaceDate = saved.lastReplaceDate || null;
-                user.extraTasksToday = saved.extraTasksToday || 0;
-                user.lastExtraTaskDate = saved.lastExtraTaskDate || null;
-                user.completedTasks = saved.completedTasks || 0;
-                completedTasksToday = saved.completedTasksToday || [];
+        async function loadUserData() {
+            try {
+                const userRef = db.collection('users').doc(user.username);
+                const userDoc = await userRef.get();
+                if (userDoc.exists) {
+                    const data = userDoc.data();
+                    user.points = data.points || 0;
+                    user.dailyPoints = data.dailyPoints || 0;
+                    user.taskReplaces = data.taskReplaces || 0;
+                    user.lastReplaceDate = data.lastReplaceDate || null;
+                    user.extraTasksToday = data.extraTasksToday || 0;
+                    user.lastExtraTaskDate = data.lastExtraTaskDate || null;
+                    user.completedTasks = data.completedTasks || 0;
+                    user.completedTasksToday = data.completedTasksToday || [];
+                    user.discordId = data.discord;
+                    user.isAdmin = data.isAdmin || false;
+                }
+            } catch (error) {
+                console.error("Ошибка загрузки данных пользователя:", error);
+                alert("Ошибка загрузки данных пользователя. Попробуйте снова.");
             }
         }
 
-        function saveUserData() {
-            localStorage.setItem('userData_' + user.username, JSON.stringify({
-                points: user.points,
-                dailyPoints: user.dailyPoints,
-                taskReplaces: user.taskReplaces,
-                lastReplaceDate: user.lastReplaceDate,
-                extraTasksToday: user.extraTasksToday,
-                lastExtraTaskDate: user.lastExtraTaskDate,
-                completedTasks: user.completedTasks,
-                completedTasksToday: completedTasksToday
-            }));
-            const playerIndex = leaderboard.findIndex(p => p.discordId === user.discordId);
-            if (playerIndex >= 0) {
-                leaderboard[playerIndex].points = user.points;
-                leaderboard[playerIndex].completedTasks = user.completedTasks;
-            } else {
-                leaderboard.push({ discordId: user.discordId, points: user.points, completedTasks: user.completedTasks });
+        async function saveUserData() {
+            try {
+                await db.collection('users').doc(user.username).update({
+                    points: user.points,
+                    dailyPoints: user.dailyPoints,
+                    taskReplaces: user.taskReplaces,
+                    lastReplaceDate: user.lastReplaceDate,
+                    extraTasksToday: user.extraTasksToday,
+                    lastExtraTaskDate: user.lastExtraTaskDate,
+                    completedTasks: user.completedTasks,
+                    completedTasksToday: user.completedTasksToday,
+                    discordId: user.discordId,
+                    isAdmin: user.isAdmin
+                });
+            } catch (error) {
+                console.error("Ошибка сохранения данных пользователя:", error);
+                alert("Ошибка сохранения данных. Проверьте соединение.");
             }
-            updateLeaderboard();
         }
 
-        function isNewDay() {
+        async function loadLeaderboard() {
+            try {
+                const snapshot = await db.collection('users').get();
+                leaderboard = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        discordId: data.discord,
+                        points: data.points || 0,
+                        completedTasks: data.completedTasks || 0
+                    };
+                });
+                updateLeaderboard();
+            } catch (error) {
+                console.error("Ошибка загрузки рейтинга:", error);
+                alert("Ошибка загрузки рейтинга.");
+            }
+        }
+
+        async function isNewDay() {
             const now = new Date();
             const today = now.toISOString().split('T')[0];
-            const lastDate = localStorage.getItem('lastDate_' + user.username);
+            const userRef = db.collection('users').doc(user.username);
+            const userDoc = await userRef.get();
+            const lastDate = userDoc.data().lastDate || null;
             if (lastDate !== today) {
-                localStorage.setItem('lastDate_' + user.username, today);
+                await userRef.update({
+                    lastDate: today,
+                    dailyPoints: 0,
+                    taskReplaces: 0,
+                    extraTasksToday: 0,
+                    lastExtraTaskDate: today,
+                    completedTasksToday: []
+                });
                 user.dailyPoints = 0;
                 user.taskReplaces = 0;
                 user.extraTasksToday = 0;
                 user.lastExtraTaskDate = today;
-                completedTasksToday = [];
-                saveUserData();
+                user.completedTasksToday = [];
+                await saveUserData();
                 return true;
             }
             return false;
         }
 
         function isTaskActive(taskId) {
-            const completedTask = completedTasksToday.find(ct => ct.id === taskId);
+            const completedTask = user.completedTasksToday.find(ct => ct.id === taskId);
             if (!completedTask) return true;
             const now = new Date();
             const completedDate = new Date(completedTask.time);
             const nextDay = new Date(now.toISOString().split('T')[0] + 'T00:00:00');
             if (now.getDate() !== completedDate.getDate()) {
-                completedTasksToday = completedTasksToday.filter(ct => ct.id !== taskId);
+                user.completedTasksToday = user.completedTasksToday.filter(ct => ct.id !== taskId);
                 saveUserData();
                 return true;
             }
@@ -432,46 +459,26 @@
                 window.location.href = 'index.html';
                 return;
             }
-            const userStr = localStorage.getItem('user_' + username);
-            if (!userStr) {
+            user.username = username;
+            await loadUserData();
+            const userDoc = await db.collection('users').doc(username).get();
+            if (!userDoc.exists) {
                 alert("Ошибка: Данные пользователя не найдены! Пожалуйста, войдите снова.");
                 localStorage.removeItem('loggedInUser');
                 window.location.href = 'index.html';
                 return;
             }
-            const userData = JSON.parse(userStr);
-            user.username = username;
-            user.discordId = userData.discord;
-            user.isAdmin = userData.code === 'admin_gta5rp2025';
+            user.discordId = userDoc.data().discord;
+            user.isAdmin = userDoc.data().isAdmin || false;
             document.getElementById("username").textContent = user.discordId;
             document.getElementById("adminPanel").style.display = user.isAdmin ? "block" : "none";
 
-            loadUserData();
-            isNewDay();
-
-            // Загрузка зарегистрированных пользователей в leaderboard
-            leaderboard = [];
-            Object.keys(localStorage)
-                .filter(key => key.startsWith('user_'))
-                .forEach(key => {
-                    const userData = JSON.parse(localStorage.getItem(key));
-                    const userStats = JSON.parse(localStorage.getItem('userData_' + key.replace('user_', ''))) || {
-                        points: 0,
-                        completedTasks: 0,
-                        completedTasksToday: []
-                    };
-                    leaderboard.push({
-                        discordId: userData.discord,
-                        points: userStats.points || 0,
-                        completedTasks: userStats.completedTasks || 0
-                    });
-                });
-
+            await isNewDay();
             await loadTasks();
+            await loadLeaderboard();
 
             updateTasks();
             updateCases();
-            updateLeaderboard();
             if (user.isAdmin) populateAdminDropdowns();
 
             startAutoPointsTimer();
@@ -479,21 +486,34 @@
 
         function startAutoPointsTimer() {
             const interval = 2 * 60 * 60 * 1000; // 2 часа
-            let lastAutoPoints = localStorage.getItem('lastAutoPoints_' + user.username);
-            let nextAutoPoints = lastAutoPoints ? parseInt(lastAutoPoints) + interval : Date.now() + interval;
+            let lastAutoPoints = null;
 
-            function updateTimer() {
+            async function getLastAutoPoints() {
+                const userRef = db.collection('users').doc(user.username);
+                const userDoc = await userRef.get();
+                lastAutoPoints = userDoc.data().lastAutoPoints || Date.now();
+            }
+
+            async function updateTimer() {
+                if (!lastAutoPoints) await getLastAutoPoints();
                 const now = Date.now();
+                let nextAutoPoints = lastAutoPoints + interval;
+
                 if (now >= nextAutoPoints) {
                     if (user.dailyPoints + 500 <= user.dailyLimit) {
                         user.points += 500;
                         user.dailyPoints += 500;
+                        await db.collection('users').doc(user.username).update({
+                            points: user.points,
+                            dailyPoints: user.dailyPoints,
+                            lastAutoPoints: now
+                        });
+                        lastAutoPoints = now;
                         updatePoints();
-                        nextAutoPoints = now + interval;
-                        localStorage.setItem('lastAutoPoints_' + user.username, nextAutoPoints);
-                        saveUserData();
                     }
+                    nextAutoPoints = now + interval;
                 }
+
                 const timeLeft = nextAutoPoints - now;
                 if (timeLeft > 0) {
                     const hours = Math.floor(timeLeft / (1000 * 60 * 60));
@@ -536,7 +556,7 @@
                 taskDiv.className = `extra-task bg-gray-700 p-4 rounded-lg bg-opacity-85 ${isActive ? '' : 'task-disabled'}`;
                 taskDiv.innerHTML = `
                     <h3 class="text-base font-semibold text-[#e0ffe8] flex items-center">
-                        <img src="https://img.icons8.com/color/24/star.png" alt="Extra Task" class="task-icon"> ${extraTask.task}
+                        <img src="https://img.icons8.com/color/24/star.png" alt="Extra Task" class="task-icon"> Дополнительное задание: ${extraTask.task}
                     </h3>
                     <p class="text-xs text-gray-300">Категория: ${extraTask.category}</p>
                     <p class="text-xs">Баллы: ${extraTask.points}</p>
@@ -566,8 +586,7 @@
         function updateLeaderboard() {
             const leaderboardBody = document.getElementById("leaderboard");
             leaderboardBody.innerHTML = "";
-            leaderboard.sort((a, b) => b.points - a.points);
-            leaderboard.forEach(player => {
+            leaderboard.sort((a, b) => b.points - a.points).forEach(player => {
                 const row = document.createElement("tr");
                 row.innerHTML = `
                     <td>${player.discordId}</td>
@@ -578,29 +597,27 @@
             });
         }
 
-        function populateAdminDropdowns() {
+        async function populateAdminDropdowns() {
             const taskSelect = document.getElementById("taskSelect");
             const caseSelect = document.getElementById("caseSelect");
             const playerSelect = document.getElementById("playerSelect");
 
-            taskSelect.innerHTML = "";
-            caseSelect.innerHTML = "";
-            playerSelect.innerHTML = "";
-
-            Object.keys(localStorage)
-                .filter(key => key.startsWith('user_'))
-                .forEach(key => {
-                    const userData = JSON.parse(localStorage.getItem(key));
-                    const userStats = JSON.parse(localStorage.getItem('userData_' + key.replace('user_', ''))) || {
-                        points: 0,
-                        completedTasks: 0
-                    };
+            try {
+                const snapshot = await db.collection('users').get();
+                playerSelect.innerHTML = "";
+                snapshot.forEach(doc => {
+                    const userData = doc.data();
                     const option = document.createElement("option");
-                    option.value = key.replace('user_', '');
-                    option.textContent = `${userData.discord} (Баллы: ${userStats.points}, Задания: ${userStats.completedTasks})`;
+                    option.value = doc.id;
+                    option.textContent = userData.discord;
                     playerSelect.appendChild(option);
                 });
+            } catch (error) {
+                console.error("Ошибка загрузки пользователей для админ-панели:", error);
+                alert("Ошибка загрузки списка игроков.");
+            }
 
+            taskSelect.innerHTML = "";
             tasks.forEach(task => {
                 const option = document.createElement("option");
                 option.value = task.id;
@@ -613,6 +630,8 @@
                 option.textContent = extraTask.task;
                 taskSelect.appendChild(option);
             }
+
+            caseSelect.innerHTML = "";
             cases.forEach(c => {
                 const option = document.createElement("option");
                 option.value = c.id;
@@ -626,7 +645,7 @@
             return urlPattern.test(link);
         }
 
-        function submitTask(taskId) {
+        async function submitTask(taskId) {
             if (!isTaskActive(taskId)) {
                 alert("Это задание уже выполнено сегодня! Дождитесь 00:00 следующего дня.");
                 return;
@@ -641,11 +660,11 @@
                 user.points += task.points;
                 user.dailyPoints += task.points;
                 user.completedTasks += 1;
-                completedTasksToday.push({ id: taskId, time: new Date().toISOString() });
-                saveUserData();
+                user.completedTasksToday.push({ id: taskId, time: new Date().toISOString() });
+                await saveUserData();
+                await updateLeaderboard();
                 updatePoints();
                 updateTasks();
-                updateLeaderboard();
                 sendToDiscord(task.task, link);
                 alert(`Задание ${task.task} выполнено! +${task.points} баллов`);
             } else {
@@ -653,7 +672,7 @@
             }
         }
 
-        function submitExtraTask(taskId) {
+        async function submitExtraTask(taskId) {
             if (!isTaskActive(taskId)) {
                 alert("Это задание уже выполнено сегодня! Дождитесь 00:00 следующего дня.");
                 return;
@@ -668,12 +687,12 @@
                 user.points += task.points;
                 user.dailyPoints += task.points;
                 user.completedTasks += 1;
-                completedTasksToday.push({ id: taskId, time: new Date().toISOString() });
+                user.completedTasksToday.push({ id: taskId, time: new Date().toISOString() });
                 extraTask = null;
-                saveUserData();
+                await saveUserData();
+                await updateLeaderboard();
                 updatePoints();
                 updateTasks();
-                updateLeaderboard();
                 sendToDiscord(task.task, link);
                 alert(`Дополнительное задание ${task.task} выполнено! +${task.points} баллов`);
             } else {
@@ -701,13 +720,16 @@
                 content = `<@${user.discordId}> крутанул кейс **${caseName}** и выиграл: Дополнительное задание: ${task.task} (+${task.points} баллов)!`;
             }
             const message = { content };
-            fetch("https://discord.com/api/webhooks/1395705773270765608/UpWvEYWZ-cbNIsQvYBFfJ9L4LgL1j398F2klyHqNcCnKwHwDB2BHvNu7l2RJPf6o30pT", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(message)
-            }).then(response => {
+            try {
+                const response = await fetch("https://discord.com/api/webhooks/1395705773270765608/UpWvEYWZ-cbNIsQvYBFfJ9L4LgL1j398F2klyHqNcCnKwHwDB2BHvNu7l2RJPf6o30pT", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(message)
+                });
                 if (!response.ok) console.warn("Ошибка при отправке результата кейса в Discord.");
-            }).catch(() => console.warn("Ошибка сети при отправке результата кейса."));
+            } catch (error) {
+                console.warn("Ошибка сети при отправке результата кейса:", error);
+            }
         }
 
         async function getTask() {
@@ -726,7 +748,7 @@
                 }
 
                 const currentTaskIds = tasks.map(t => t.id);
-                const completedTaskIds = completedTasksToday.map(ct => ct.id);
+                const completedTaskIds = user.completedTasksToday.map(ct => ct.id);
                 const availableTasks = allTasks.filter(t => !currentTaskIds.includes(t.id) && !completedTaskIds.includes(t.id));
 
                 if (availableTasks.length > 0) {
@@ -735,8 +757,8 @@
                     if (!user.isAdmin) {
                         user.extraTasksToday++;
                         user.lastExtraTaskDate = today;
+                        await saveUserData();
                     }
-                    saveUserData();
                     alert("Новое дополнительное задание получено! Проверьте секцию заданий.");
                 } else {
                     alert("Нет доступных дополнительных заданий!");
@@ -759,13 +781,13 @@
             }
 
             const currentTaskIds = tasks.map(t => t.id);
-            const completedTaskIds = completedTasksToday.map(ct => ct.id);
+            const completedTaskIds = user.completedTasksToday.map(ct => ct.id);
             const availableTasks = allTasks.filter(t => !currentTaskIds.includes(t.id) && !completedTaskIds.includes(t.id));
 
             if (availableTasks.length > 0) {
                 extraTask = availableTasks[Math.floor(Math.random() * availableTasks.length)];
                 updateTasks();
-                saveUserData();
+                await saveUserData();
                 return extraTask;
             } else {
                 return null;
@@ -776,7 +798,7 @@
             const now = new Date();
             const today = now.toISOString().split('T')[0];
             if (user.lastReplaceDate !== today && (user.taskReplaces < 1 || user.isAdmin)) {
-                const completedTaskIds = completedTasksToday.map(ct => ct.id);
+                const completedTaskIds = user.completedTasksToday.map(ct => ct.id);
                 const completedTasks = tasks.filter(t => completedTaskIds.includes(t.id));
 
                 let allTasks = [];
@@ -800,40 +822,29 @@
                 if (!user.isAdmin) {
                     user.taskReplaces++;
                     user.lastReplaceDate = today;
+                    await saveUserData();
                 }
-                saveUserData();
                 alert("Невыполненные задания заменены!");
             } else {
                 alert("Бесплатная замена заданий на сегодня исчерпана!");
             }
         }
 
-        function viewCase(caseId) {
+        async function viewCase(caseId) {
             const c = cases.find(c => c.id === caseId);
             document.getElementById("caseViewTitle").textContent = c.name;
             document.getElementById("caseViewImage").src = c.image;
             document.getElementById("caseViewCost").textContent = c.cost;
-            const modalContent = document.getElementById("caseViewModalContent");
             const itemsList = document.getElementById("caseViewItems");
             itemsList.innerHTML = "";
+            c.items.forEach(item => {
+                const li = document.createElement("li");
+                li.textContent = item;
+                itemsList.appendChild(li);
+            });
             const spinButton = document.getElementById("caseViewSpin");
             spinButton.disabled = user.points < c.cost;
             spinButton.onclick = () => spinCase(caseId);
-
-            if (c.id === 2) {
-                modalContent.classList.add("full-screen-modal");
-                itemsList.style.display = "none";
-                document.querySelector("#caseViewModal button[onclick='closeCaseViewModal()']").style.display = "none";
-            } else {
-                modalContent.classList.remove("full-screen-modal");
-                itemsList.style.display = "block";
-                document.querySelector("#caseViewModal button[onclick='closeCaseViewModal()']").style.display = "block";
-                c.items.forEach(item => {
-                    const li = document.createElement("li");
-                    li.textContent = item;
-                    itemsList.appendChild(li);
-                });
-            }
             document.getElementById("caseViewModal").style.display = "flex";
         }
 
@@ -841,7 +852,7 @@
             const c = cases.find(c => c.id === caseId);
             if (user.points >= c.cost) {
                 user.points -= c.cost;
-                updatePoints();
+                await saveUserData();
                 const caseDiv = document.querySelector(`#cases > div:nth-child(${caseId})`);
                 caseDiv.classList.add("case-spin");
                 setTimeout(async () => {
@@ -855,15 +866,16 @@
                     if (c.id === 2 && win) {
                         task = await addExtraTaskFromCase();
                         if (task) {
-                            resultMessage = `Результат кейса: Вы выиграли! Дополнительное задание: ${task.task} (+${task.points} баллов)`;
+                            resultMessage = `Вы выиграли! Дополнительное задание: ${task.task} (+${task.points} баллов)`;
                         } else {
-                            resultMessage = `Результат кейса: Вы выиграли! Но новых заданий нет.`;
+                            resultMessage = `Вы выиграли! Но новых заданий нет.`;
                         }
                     }
 
                     showModal(resultMessage);
-                    sendCaseResultToDiscord(c.name, win ? "выиграл" : "проиграл", item, task);
+                    await sendCaseResultToDiscord(c.name, win ? "выиграл" : "проиграл", item, task);
                     closeCaseViewModal();
+                    updatePoints();
                 }, 1000);
             } else {
                 alert("Недостаточно баллов для кейса!");
@@ -881,11 +893,9 @@
                 leaderboard.push({ discordId: user.discordId, points: user.points, completedTasks: user.completedTasks });
             }
             updateLeaderboard();
-            saveUserData();
-            if (user.isAdmin) populateAdminDropdowns();
         }
 
-        function updateTask() {
+        async function updateTask() {
             const taskId = parseInt(document.getElementById("taskSelect").value);
             const newTaskName = document.getElementById("newTaskName").value;
             const newTaskCategory = document.getElementById("newTaskCategory").value;
@@ -898,12 +908,11 @@
                 updateTasks();
                 cases[1].items = tasks.map(t => t.task);
                 updateCases();
-                if (user.isAdmin) populateAdminDropdowns();
                 alert(`Задание обновлено: ${task.task}`);
             }
         }
 
-        function updateCase() {
+        async function updateCase() {
             const caseId = parseInt(document.getElementById("caseSelect").value);
             const caseName = document.getElementById("caseName").value;
             const caseCost = parseInt(document.getElementById("caseCost").value);
@@ -916,111 +925,82 @@
                 if (caseWinRate >= 0) c.winRate = caseWinRate;
                 if (caseItems.length > 0 && caseId !== 2) c.items = caseItems;
                 updateCases();
-                if (user.isAdmin) populateAdminDropdowns();
                 alert(`Кейс обновлен: ${c.name}`);
             }
         }
 
-        function resetExtraTaskLimit() {
+        async function resetExtraTaskLimit() {
             const selectedUsername = document.getElementById("playerSelect").value;
-            const userData = JSON.parse(localStorage.getItem('userData_' + selectedUsername)) || {};
-            userData.extraTasksToday = 0;
-            userData.lastExtraTaskDate = null;
-            localStorage.setItem('userData_' + selectedUsername, JSON.stringify(userData));
-            if (selectedUsername === user.username) {
-                user.extraTasksToday = 0;
-                user.lastExtraTaskDate = null;
-                saveUserData();
+            try {
+                await db.collection('users').doc(selectedUsername).update({
+                    extraTasksToday: 0,
+                    lastExtraTaskDate: null
+                });
+                if (selectedUsername === user.username) {
+                    user.extraTasksToday = 0;
+                    user.lastExtraTaskDate = null;
+                    await saveUserData();
+                }
+                alert(`Лимит дополнительных заданий сброшен для ${selectedUsername}`);
+            } catch (error) {
+                console.error("Ошибка сброса лимита:", error);
+                alert("Ошибка при сбросе лимита.");
             }
-            alert(`Лимит дополнительных заданий сброшен для ${selectedUsername}`);
-            if (user.isAdmin) populateAdminDropdowns();
         }
 
-        function adjustUserPoints() {
+        async function deleteUser() {
+            const selectedUsername = document.getElementById("playerSelect").value;
+            if (selectedUsername === user.username) {
+                alert("Нельзя удалить текущего пользователя!");
+                return;
+            }
+            try {
+                await db.collection('users').doc(selectedUsername).delete();
+                await loadLeaderboard();
+                await populateAdminDropdowns();
+                alert(`Пользователь ${selectedUsername} удалён.`);
+            } catch (error) {
+                console.error("Ошибка удаления пользователя:", error);
+                alert("Ошибка при удалении пользователя.");
+            }
+        }
+
+        async function adjustUserPoints() {
             const selectedUsername = document.getElementById("playerSelect").value;
             const points = parseInt(document.getElementById("userPoints").value);
             if (isNaN(points)) {
                 alert("Введите корректное количество баллов!");
                 return;
             }
-            const userData = JSON.parse(localStorage.getItem('userData_' + selectedUsername)) || {
-                points: 0,
-                dailyPoints: 0,
-                completedTasks: 0
-            };
-            userData.points = (userData.points || 0) + points;
-            userData.dailyPoints = (userData.dailyPoints || 0) + points;
-            localStorage.setItem('userData_' + selectedUsername, JSON.stringify(userData));
-
-            if (selectedUsername === user.username) {
-                user.points = userData.points;
-                user.dailyPoints = userData.dailyPoints;
-                updatePoints();
-            } else {
-                const playerIndex = leaderboard.findIndex(p => p.discordId === JSON.parse(localStorage.getItem('user_' + selectedUsername)).discord);
-                if (playerIndex >= 0) {
-                    leaderboard[playerIndex].points = userData.points;
-                    updateLeaderboard();
+            try {
+                const userRef = db.collection('users').doc(selectedUsername);
+                const userDoc = await userRef.get();
+                if (!userDoc.exists) {
+                    alert("Пользователь не найден!");
+                    return;
                 }
-            }
-            alert(`Баллы изменены на ${points} для ${selectedUsername}`);
-            if (user.isAdmin) populateAdminDropdowns();
-        }
-
-        function deleteUser() {
-            const selectedUsername = document.getElementById("playerSelect").value;
-            if (selectedUsername === user.username) {
-                alert("Нельзя удалить текущего пользователя!");
-                return;
-            }
-            if (confirm(`Вы уверены, что хотите удалить пользователя ${selectedUsername}?`)) {
-                const userData = JSON.parse(localStorage.getItem('user_' + selectedUsername));
-                localStorage.removeItem('user_' + selectedUsername);
-                localStorage.removeItem('userData_' + selectedUsername);
-                localStorage.removeItem('lastAutoPoints_' + selectedUsername);
-                localStorage.removeItem('lastDate_' + selectedUsername);
-                leaderboard = leaderboard.filter(p => p.discordId !== userData.discord);
-                updateLeaderboard();
-                if (user.isAdmin) populateAdminDropdowns();
-                alert(`Пользователь ${selectedUsername} удален`);
-            }
-        }
-
-        function exportUserData() {
-            const userData = localStorage.getItem('userData_' + user.username);
-            const blob = new Blob([userData], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `userData_${user.username}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-            alert("Данные экспортированы! Отправьте файл админу.");
-        }
-
-        function importUserData() {
-            const fileInput = document.getElementById("importUserData");
-            const file = fileInput.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const userData = JSON.parse(e.target.result);
-                    const username = file.name.replace('userData_', '').replace('.json', '');
-                    localStorage.setItem('userData_' + username, JSON.stringify(userData));
-                    alert(`Данные пользователя ${username} импортированы!`);
-                    init(); // Перезагрузка данных
-                };
-                reader.readAsText(file);
-            } else {
-                alert("Выберите файл для импорта!");
+                const currentPoints = userDoc.data().points || 0;
+                const currentDailyPoints = userDoc.data().dailyPoints || 0;
+                await userRef.update({
+                    points: currentPoints + points,
+                    dailyPoints: currentDailyPoints + points
+                });
+                if (selectedUsername === user.username) {
+                    user.points += points;
+                    user.dailyPoints += points;
+                    await saveUserData();
+                    updatePoints();
+                }
+                await loadLeaderboard();
+                alert(`Баллы изменены на ${points} для ${selectedUsername}`);
+            } catch (error) {
+                console.error("Ошибка изменения баллов:", error);
+                alert("Ошибка при изменении баллов.");
             }
         }
 
         function logout() {
             localStorage.removeItem('loggedInUser');
-            localStorage.removeItem('userData_' + user.username);
-            localStorage.removeItem('lastAutoPoints_' + user.username);
-            localStorage.removeItem('lastDate_' + user.username);
             alert("Выход выполнен!");
             window.location.href = 'index.html';
         }
