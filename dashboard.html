@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дашборд - Баллы и Кейсы</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: url('https://images.unsplash.com/photo-1614741118887-7a4ee193a5fa') no-repeat center center fixed;
+            background-size: cover;
+            color: #e0ffe8;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: -1;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(18, 197, 107, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 10px 5px rgba(18, 197, 107, 0.5); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(18, 197, 107, 0.7); }
+        }
+        .pulse:hover {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .case-spin {
+            animation: spin 1s ease-in-out;
+        }
+        .case-item {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: rgba(0, 0, 0, 0.85);
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+        }
+        .case-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(18, 197, 107, 0.5);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: linear-gradient(135deg, #2a9d7f, #1a4735);
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            color: #e0ffe8;
+            box-shadow: 0 0 30px rgba(18, 197, 107, 0.5);
+            animation: fadeIn 0.3s ease-in;
+        }
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(0, 0, 0, 0.85);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .leaderboard-table th, .leaderboard-table td {
+            border: 1px solid #4a5568;
+            padding: 12px;
+            text-align: left;
+            color: #e0ffe8;
+        }
+        .leaderboard-table th {
+            background: #12c56b;
+        }
+        button {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            padding: 8px 16px;
+        }
+        button:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        input[type="text"], input[type="number"] {
+            font-size: 0.9rem;
+            padding: 8px;
+        }
+        .task-disabled input,
+        .task-disabled button {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .extra-task {
+            border-left: 4px solid #12c56b;
+            background: rgba(18, 197, 107, 0.2);
+        }
+        .task-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+        }
+        .container > div {
+            animation: fadeIn 0.5s ease-in;
+        }
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: #e0ffe8;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body class="text-white font-sans">
+    <div class="container mx-auto p-6 max-w-6xl">
+        <h1 class="text-4xl font-bold text-center mb-8 text-[#e0ffe8] drop-shadow-lg flex items-center justify-center">
+            <img src="https://img.icons8.com/color/24/dashboard-layout.png" alt="Dashboard" class="task-icon mr-2">
+            Дашборд - Баллы и Кейсы
+        </h1>
+
+        <div class="flex justify-center space-x-4 mb-8">
+            <button onclick="logout()" class="bg-red-600 pulse text-sm rounded-lg">
+                <img src="https://img.icons8.com/color/24/logout-rounded.png" alt="Logout" class="task-icon inline"> Выйти
+            </button>
+            <button onclick="getTask()" class="bg-blue-600 pulse text-sm rounded-lg">
+                <img src="https://img.icons8.com/color/24/task.png" alt="Task" class="task-icon inline"> Получить задание
+            </button>
+            <button onclick="scrollToCases()" class="bg-purple-600 pulse text-sm rounded-lg">
+                <img src="https://img.icons8.com/color/24/gift.png" alt="Case" class="task-icon inline"> Кейсы
+            </button>
+        </div>
+
+        <div class="bg-gray-800 p-6 rounded-xl shadow-2xl mb-8 bg-opacity-85">
+            <h2 class="text-2xl font-semibold mb-4 flex items-center">
+                <img src="https://img.icons8.com/color/24/user.png" alt="User" class="task-icon"> Пользователь: <span id="username">Игрок#1234</span>
+            </h2>
+            <p class="text-lg">Баллы: <span id="points">0</span> / 8000 (Дневной лимит)</p>
+            <p class="text-sm text-gray-300">500 баллов начисляется каждые 2 часа <span id="autoPointsTimer">(Осталось: --:--:--)</span></p>
+            <p class="text-sm">Выполненные задачи: <span id="completedTasks">0</span></p>
+        </div>
+
+        <div id="adminPanel" class="bg-red-900 p-6 rounded-xl shadow-2xl mb-8 bg-opacity-85 hidden">
+            <h2 class="text-2xl font-semibold mb-4 flex items-center">
+                <img src="https://img.icons8.com/color/24/admin-settings-male.png" alt="Admin" class="task-icon"> Панель администратора
+            </h2>
+            <div class="grid grid-cols-1 gap-4">
+                <div>
+                    <label class="block text-sm mb-2">Выберите игрока:</label>
+                    <select id="playerSelect" class="bg-gray-700 text-white p-2 rounded-lg w-full text-sm"></select>
+                </div>
+                <div>
+                    <label class="block text-sm mb-2">Добавить/убрать баллы у игрока:</label>
+                    <input id="userPoints" type="number" placeholder="Баллы" class="bg-gray-700 text-white p-2 rounded-lg mt-2 w-full text-sm">
+                    <button onclick="adjustUserPoints()" class="bg-blue-600 p-2 rounded-lg mt-2 w-full text-sm pulse">Изменить</button>
+                </div>
+                <div>
+                    <label class="block text-sm mb-2">Изменить баллы за задание:</label>
+                    <select id="taskSelect" class="bg-gray-700 text-white p-2 rounded-lg w-full text-sm"></select>
+                    <input id="newTaskName" type="text" placeholder="Новое название" class="bg-gray-700 text-white p-2 rounded-lg mt-2 w-full text-sm">
+                    <input id="newTaskCategory" type="text" placeholder="Новая категория" class="bg-gray-700 text-white p-2 rounded-lg mt-2 w-full text-sm">
+                    <input id="newPoints" type="number" placeholder="Новые баллы" class="bg-gray-700 text-white p-2 rounded-lg mt-2 w-full text-sm">
+                    <button onclick="updateTask()" class="bg-blue-600 p-2 rounded-lg mt-2 w-full text-sm pulse">Обновить задание</button>
+                </div>
+                <div>
+                    <label class="block text-sm mb-2">Изменить кейс:</label>
+                    <select id="caseSelect" class="bg-gray-700 text-white p-2 rounded-lg w-full text-sm"></select>
+                    <input id="caseName" type="text" placeholder="Название кейса" class="bg-gray-700 text-white p-2 rounded-lg mt-2 w-full text-sm">
+                    <input id="caseCost" type="number" placeholder="Стоимость" class="bg-gray-700 text-white p-2 rounded-lg mt-2 w-full text-sm">
+                    <input id="caseWinRate" type="number" placeholder="Процент выигрыша" class="bg-gray-700 text-white p-2 rounded-lg mt-2 w-full text-sm">
+                    <input id="caseItems" type="text" placeholder="Предметы (через запятую)" class="bg-gray-700 text-white p-2 rounded-lg mt-2 w-full text-sm">
+                    <button onclick="updateCase()" class="bg-blue-600 p-2 rounded-lg mt-2 w-full text-sm pulse">Обновить кейс</button>
+                </div>
+                <div>
+                    <label class="block text-sm mb-2">Сбросить лимит доп. заданий для игрока:</label>
+                    <button onclick="resetExtraTaskLimit()" class="bg-yellow-600 p-2 rounded-lg mt-2 w-full text-sm pulse">Сбросить лимит</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 p-6 rounded-xl shadow-2xl mb-8 bg-opacity-85">
+            <h2 class="text-2xl font-semibold mb-4 text-[#e0ffe8] flex items-center">
+                <img src="https://img.icons8.com/color/24/task.png" alt="Tasks" class="task-icon"> Задания
+            </h2>
+            <div id="tasks" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            <div id="extraTask" class="mt-4"></div>
+            <button id="replaceTask" class="bg-yellow-600 p-2 rounded-lg mt-4 w-full text-sm pulse" onclick="replaceTask()">
+                <img src="https://img.icons8.com/color/24/refresh.png" alt="Replace" class="task-icon inline"> Заменить задание (1 раз бесплатно в день)
+            </button>
+        </div>
+
+        <div id="casesSection" class="bg-gray-800 p-6 rounded-xl shadow-2xl mb-8 bg-opacity-85">
+            <h2 class="text-2xl font-semibold mb-4 text-[#e0ffe8] flex items-center">
+                <img src="https://img.icons8.com/color/24/gift.png" alt="Cases" class="task-icon"> Кейсы
+            </h2>
+            <div id="cases" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"></div>
+        </div>
+
+        <div class="bg-gray-800 p-6 rounded-xl shadow-2xl bg-opacity-85">
+            <h2 class="text-2xl font-semibold mb-4 text-[#e0ffe8] flex items-center">
+                <img src="https://img.icons8.com/color/24/ranking.png" alt="Leaderboard" class="task-icon"> Рейтинг игроков
+            </h2>
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>Имя</th>
+                        <th>Баллы</th>
+                        <th>Выполненные задачи</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard"></tbody>
+            </table>
+        </div>
+
+        <div id="caseModal" class="modal">
+            <div class="modal-content">
+                <h2 class="text-xl font-semibold mb-4">Результат кейса</h2>
+                <p id="caseResult"></p>
+                <button onclick="closeModal()" class="bg-red-600 p-2 rounded-lg mt-4 w-full text-sm pulse">Закрыть</button>
+            </div>
+        </div>
+
+        <div id="caseViewModal" class="modal">
+            <div class="modal-content">
+                <h2 class="text-xl font-semibold mb-4" id="caseViewTitle"></h2>
+                <img id="caseViewImage" src="" alt="Case" class="mx-auto mb-4 w-32 h-32 object-cover rounded-lg">
+                <p class="text-sm mb-4">Стоимость: <span id="caseViewCost"></span> баллов</p>
+                <p class="text-sm mb-4">Предметы:</p>
+                <ul id="caseViewItems" class="list-disc pl-5 text-sm"></ul>
+                <button id="caseViewSpin" class="bg-purple-600 p-2 rounded-lg mt-4 w-full text-sm pulse">Крутить</button>
+                <button onclick="closeCaseViewModal()" class="bg-red-600 p-2 rounded-lg mt-2 w-full text-sm pulse">Закрыть</button>
+            </div>
+        </div>
+
+        <footer>Created by Sanya Dragon, Discord for contact: a4smoke</footer>
+    </div>
+
+    <script>
+        let user = {
+            points: 0,
+            dailyPoints: 0,
+            dailyLimit: 8000,
+            taskReplaces: 0,
+            lastReplaceDate: null,
+            extraTasksToday: 0,
+            lastExtraTaskDate: null,
+            completedTasks: 0,
+            isAdmin: false,
+            discordId: "",
+            username: ""
+        };
+
+        let tasks = [];
+        let extraTask = null;
+        let completedTasksToday = [];
+        let cases = [
+            { id: 1, name: "Денежный кейс 1", cost: 25000, items: ["$100", "$200", "$300", "$400", "$500", "$600", "$700", "$800", "$900", "$1000"], winRate: 100, image: "https://img.icons8.com/color/96/money-bag.png" },
+            { id: 2, name: "Кейс с доп. заданиями", cost: 0, items: [], winRate: 100, image: "https://img.icons8.com/color/96/task.png" },
+            { id: 3, name: "Денежный кейс 2", cost: 35000, items: ["$1000", "$1500", "$2000", "$2500", "$3000", "$3500", "$4000", "$4500", "$5000", "$5500"], winRate: 100, image: "https://img.icons8.com/color/96/safe.png" },
+            { id: 4, name: "Кейс расходников", cost: 30000, items: ["$500", "Задание 1", "$1000", "Задание 2", "$1500", "Задание 3", "$2000", "Задание 4", "$2500", "Задание 5"], winRate: 100, image: "https://img.icons8.com/color/96/toolbox.png" },
+            { id: 5, name: "Кейс с автомобилями", cost: 100000, items: [
+                "Lamborghini Urus 6x6",
+                "Lamborghini Countach 2022",
+                "Lamborghini Countach 2022",
+                "Lamborghini Murciélago",
+                "Lamborghini Murciélago",
+                "Lamborghini Centenario",
+                "Ferrari 296 GTB",
+                "Mercedes-Benz G63 AMG 6x6",
+                "BMW M5 F90",
+                "BMW X6 M",
+                "Audi A7",
+                "Ford Transit 2011"
+            ], winRate: 100, image: "https://img.icons8.com/color/96/car.png" }
+        ];
+
+        let leaderboard = [
+            { discordId: "Игрок1#0001", points: 15000, completedTasks: 10 },
+            { discordId: "Игрок2#0002", points: 12000, completedTasks: 8 },
+            { discordId: "Игрок3#0003", points: 8000, completedTasks: 5 }
+        ];
+
+        async function loadTasks() {
+            try {
+                const response = await fetch('tasks.json');
+                if (response.ok) {
+                    tasks = await response.json();
+                    // Заполняем предметы для кейса с доп. заданиями
+                    cases[1].items = tasks.map(t => t.task);
+                } else {
+                    console.warn("Файл tasks.json не найден, используются стандартные задания");
+                    tasks = [
+                        { id: 1, category: "Пропуск", task: "Отбитие ФТ/ФЗ", points: 1500 },
+                        { id: 2, category: "Пропуск", task: "Обыск 30 зеков", points: 1000 },
+                        { id: 3, category: "Пропуск", task: "Помощь в аресте 5 раз", points: 1000 },
+                        { id: 4, category: "Пропуск", task: "Отстоять КПП 3 часа", points: 500 },
+                        { id: 5, category: "Пропуск", task: "Дежурство в БО 3 часа", points: 500 },
+                        { id: 6, category: "Пропуск", task: "Патруль 3 часа", points: 500 }
+                    ];
+                    cases[1].items = tasks.map(t => t.task);
+                }
+            } catch (error) {
+                console.warn("Ошибка загрузки tasks.json:", error);
+                tasks = [
+                    { id: 1, category: "Пропуск", task: "Отбитие ФТ/ФЗ", points: 1500 },
+                    { id: 2, category: "Пропуск", task: "Обыск 30 зеков", points: 1000 },
+                    { id: 3, category: "Пропуск", task: "Помощь в аресте 5 раз", points: 1000 },
+                    { id: 4, category: "Пропуск", task: "Отстоять КПП 3 часа", points: 500 },
+                    { id: 5, category: "Пропуск", task: "Дежурство в БО 3 часа", points: 500 },
+                    { id: 6, category: "Пропуск", task: "Патруль 3 часа", points: 500 }
+                ];
+                cases[1].items = tasks.map(t => t.task);
+            }
+            tasks = tasks.sort(() => Math.random() - 0.5).slice(0, 6);
+        }
+
+        function loadUserData() {
+            const savedUser = localStorage.getItem('userData_' + user.username);
+            if (savedUser) {
+                const saved = JSON.parse(savedUser);
+                user.points = saved.points || 0;
+                user.dailyPoints = saved.dailyPoints || 0;
+                user.taskReplaces = saved.taskReplaces || 0;
+                user.lastReplaceDate = saved.lastReplaceDate || null;
+                user.extraTasksToday = saved.extraTasksToday || 0;
+                user.lastExtraTaskDate = saved.lastExtraTaskDate || null;
+                user.completedTasks = saved.completedTasks || 0;
+                completedTasksToday = saved.completedTasksToday || [];
+            }
+        }
+
+        function saveUserData() {
+            localStorage.setItem('userData_' + user.username, JSON.stringify({
+                points: user.points,
+                dailyPoints: user.dailyPoints,
+                taskReplaces: user.taskReplaces,
+                lastReplaceDate: user.lastReplaceDate,
+                extraTasksToday: user.extraTasksToday,
+                lastExtraTaskDate: user.lastExtraTaskDate,
+                completedTasks: user.completedTasks,
+                completedTasksToday: completedTasksToday
+            }));
+        }
+
+        function isNewDay() {
+            const now = new Date();
+            const today = now.toISOString().split('T')[0];
+            const lastDate = localStorage.getItem('lastDate_' + user.username);
+            if (lastDate !== today) {
+                localStorage.setItem('lastDate_' + user.username, today);
+                user.dailyPoints = 0;
+                user.taskReplaces = 0;
+                user.extraTasksToday = 0;
+                user.lastExtraTaskDate = today;
+                completedTasksToday = [];
+                saveUserData();
+                return true;
+            }
+            return false;
+        }
+
+        function isTaskActive(taskId) {
+            const completedTask = completedTasksToday.find(ct => ct.id === taskId);
+            if (!completedTask) return true;
+            const now = new Date();
+            const completedDate = new Date(completedTask.time);
+            const nextDay = new Date(now.toISOString().split('T')[0] + 'T00:00:00');
+            if (now.getDate() !== completedDate.getDate()) {
+                completedTasksToday = completedTasksToday.filter(ct => ct.id !== taskId);
+                saveUserData();
+                return true;
+            }
+            return false;
+        }
+
+        async function init() {
+            const username = localStorage.getItem('loggedInUser');
+            if (!username) {
+                alert("Ошибка: Пользователь не авторизован! Пожалуйста, войдите.");
+                window.location.href = 'index.html';
+                return;
+            }
+            const userStr = localStorage.getItem('user_' + username);
+            if (!userStr) {
+                alert("Ошибка: Данные пользователя не найдены! Пожалуйста, войдите снова.");
+                localStorage.removeItem('loggedInUser');
+                window.location.href = 'index.html';
+                return;
+            }
+            const userData = JSON.parse(userStr);
+            user.username = username;
+            user.discordId = userData.discord;
+            user.isAdmin = userData.code === 'admin_gta5rp2025';
+            document.getElementById("username").textContent = user.discordId;
+            document.getElementById("adminPanel").style.display = user.isAdmin ? "block" : "none";
+
+            loadUserData();
+            isNewDay();
+
+            if (!leaderboard.find(p => p.discordId === user.discordId)) {
+                leaderboard.push({ discordId: user.discordId, points: user.points, completedTasks: user.completedTasks });
+            }
+
+            await loadTasks();
+
+            updateTasks();
+            updateCases();
+            updateLeaderboard();
+            if (user.isAdmin) populateAdminDropdowns();
+
+            startAutoPointsTimer();
+        }
+
+        function startAutoPointsTimer() {
+            const interval = 2 * 60 * 60 * 1000; // 2 часа
+            let lastAutoPoints = localStorage.getItem('lastAutoPoints_' + user.username);
+            let nextAutoPoints = lastAutoPoints ? parseInt(lastAutoPoints) + interval : Date.now() + interval;
+
+            function updateTimer() {
+                const now = Date.now();
+                if (now >= nextAutoPoints) {
+                    if (user.dailyPoints + 500 <= user.dailyLimit) {
+                        user.points += 500;
+                        user.dailyPoints += 500;
+                        updatePoints();
+                        nextAutoPoints = now + interval;
+                        localStorage.setItem('lastAutoPoints_' + user.username, nextAutoPoints);
+                        saveUserData();
+                    }
+                }
+                const timeLeft = nextAutoPoints - now;
+                if (timeLeft > 0) {
+                    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+                    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                    document.getElementById("autoPointsTimer").textContent = `(Осталось: ${hours}ч ${minutes}м ${seconds}с)`;
+                } else {
+                    document.getElementById("autoPointsTimer").textContent = `(Осталось: 0ч 0м 0с)`;
+                }
+            }
+
+            updateTimer();
+            setInterval(updateTimer, 1000);
+        }
+
+        function updateTasks() {
+            const tasksDiv = document.getElementById("tasks");
+            tasksDiv.innerHTML = "";
+            tasks.forEach(task => {
+                const isActive = isTaskActive(task.id);
+                const taskDiv = document.createElement("div");
+                taskDiv.className = `bg-gray-700 p-4 rounded-lg bg-opacity-85 ${isActive ? '' : 'task-disabled'}`;
+                taskDiv.innerHTML = `
+                    <h3 class="text-base font-semibold text-[#e0ffe8] flex items-center">
+                        <img src="https://img.icons8.com/color/24/task.png" alt="Task" class="task-icon"> ${task.task}
+                    </h3>
+                    <p class="text-xs text-gray-300">Категория: ${task.category}</p>
+                    <p class="text-xs">Баллы: ${task.points}</p>
+                    <input type="text" id="taskLink${task.id}" placeholder="Ссылка на скрин" class="bg-gray-600 text-white p-2 rounded-lg mt-2 w-full text-sm">
+                    <button onclick="submitTask(${task.id})" class="bg-green-600 p-2 rounded-lg mt-2 w-full text-sm pulse">Отправить</button>
+                `;
+                tasksDiv.appendChild(taskDiv);
+            });
+
+            const extraTaskDiv = document.getElementById("extraTask");
+            extraTaskDiv.innerHTML = "";
+            if (extraTask) {
+                const isActive = isTaskActive(extraTask.id);
+                const taskDiv = document.createElement("div");
+                taskDiv.className = `extra-task bg-gray-700 p-4 rounded-lg bg-opacity-85 ${isActive ? '' : 'task-disabled'}`;
+                taskDiv.innerHTML = `
+                    <h3 class="text-base font-semibold text-[#e0ffe8] flex items-center">
+                        <img src="https://img.icons8.com/color/24/star.png" alt="Extra Task" class="task-icon"> Дополнительное задание: ${extraTask.task}
+                    </h3>
+                    <p class="text-xs text-gray-300">Категория: ${extraTask.category}</p>
+                    <p class="text-xs">Баллы: ${extraTask.points}</p>
+                    <input type="text" id="taskLinkExtra${extraTask.id}" placeholder="Ссылка на скрин" class="bg-gray-600 text-white p-2 rounded-lg mt-2 w-full text-sm">
+                    <button onclick="submitExtraTask(${extraTask.id})" class="bg-green-600 p-2 rounded-lg mt-2 w-full text-sm pulse">Отправить</button>
+                `;
+                extraTaskDiv.appendChild(taskDiv);
+            }
+        }
+
+        function updateCases() {
+            const casesDiv = document.getElementById("cases");
+            casesDiv.innerHTML = "";
+            cases.forEach(c => {
+                const caseDiv = document.createElement("div");
+                caseDiv.className = "case-item bg-gray-700 p-4 rounded-lg text-center bg-opacity-85";
+                caseDiv.innerHTML = `
+                    <img src="${c.image}" alt="${c.name}" class="mx-auto mb-2 w-24 h-24 object-cover rounded-lg">
+                    <h3 class="text-base font-semibold text-[#e0ffe8]">${c.name}</h3>
+                    <p class="text-xs">Стоимость: ${c.cost} баллов</p>
+                    <button onclick="viewCase(${c.id})" class="bg-blue-600 p-2 rounded-lg mt-2 w-full text-sm pulse">Просмотреть</button>
+                `;
+                casesDiv.appendChild(caseDiv);
+            });
+        }
+
+        function updateLeaderboard() {
+            const leaderboardBody = document.getElementById("leaderboard");
+            leaderboardBody.innerHTML = "";
+            leaderboard.forEach(player => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${player.discordId}</td>
+                    <td>${player.points}</td>
+                    <td>${player.completedTasks}</td>
+                `;
+                leaderboardBody.appendChild(row);
+            });
+        }
+
+        function populateAdminDropdowns() {
+            const taskSelect = document.getElementById("taskSelect");
+            const caseSelect = document.getElementById("caseSelect");
+            const playerSelect = document.getElementById("playerSelect");
+
+            Object.keys(localStorage).filter(key => key.startsWith('user_')).forEach(key => {
+                const userData = JSON.parse(localStorage.getItem(key));
+                const option = document.createElement("option");
+                option.value = key.replace('user_', '');
+                option.textContent = userData.discord;
+                playerSelect.appendChild(option);
+            });
+
+            tasks.forEach(task => {
+                const option = document.createElement("option");
+                option.value = task.id;
+                option.textContent = task.task;
+                taskSelect.appendChild(option);
+            });
+            if (extraTask) {
+                const option = document.createElement("option");
+                option.value = extraTask.id;
+                option.textContent = extraTask.task;
+                taskSelect.appendChild(option);
+            }
+            cases.forEach(c => {
+                const option = document.createElement("option");
+                option.value = c.id;
+                option.textContent = c.name;
+                caseSelect.appendChild(option);
+            });
+        }
+
+        function isValidLink(link) {
+            const urlPattern = /^(https?:\/\/)([\w-]+\.)+[\w-]+(\/[\w- ./?%&=]*)?$/;
+            return urlPattern.test(link);
+        }
+
+        function submitTask(taskId) {
+            if (!isTaskActive(taskId)) {
+                alert("Это задание уже выполнено сегодня! Дождитесь 00:00 следующего дня.");
+                return;
+            }
+            const task = tasks.find(t => t.id === taskId);
+            const link = document.getElementById(`taskLink${taskId}`).value;
+            if (!link || !isValidLink(link)) {
+                alert("Введите действительную ссылку (Яндекс, Imgur, Yapiks или Discord)!");
+                return;
+            }
+            if (user.dailyPoints + task.points <= user.dailyLimit) {
+                user.points += task.points;
+                user.dailyPoints += task.points;
+                user.completedTasks += 1;
+                completedTasksToday.push({ id: taskId, time: new Date().toISOString() });
+                saveUserData();
+                updatePoints();
+                updateTasks();
+                updateLeaderboard();
+                sendToDiscord(task.task, link);
+                alert(`Задание ${task.task} выполнено! +${task.points} баллов`);
+            } else {
+                alert("Достигнут дневной лимит баллов!");
+            }
+        }
+
+        function submitExtraTask(taskId) {
+            if (!isTaskActive(taskId)) {
+                alert("Это задание уже выполнено сегодня! Дождитесь 00:00 следующего дня.");
+                return;
+            }
+            const task = extraTask;
+            const link = document.getElementById(`taskLinkExtra${taskId}`).value;
+            if (!link || !isValidLink(link)) {
+                alert("Введите действительную ссылку (Яндекс, Imgur, Yapiks или Discord)!");
+                return;
+            }
+            if (user.dailyPoints + task.points <= user.dailyLimit) {
+                user.points += task.points;
+                user.dailyPoints += task.points;
+                user.completedTasks += 1;
+                completedTasksToday.push({ id: taskId, time: new Date().toISOString() });
+                extraTask = null;
+                saveUserData();
+                updatePoints();
+                updateTasks();
+                updateLeaderboard();
+                sendToDiscord(task.task, link);
+                alert(`Дополнительное задание ${task.task} выполнено! +${task.points} баллов`);
+            } else {
+                alert("Достигнут дневной лимит баллов!");
+            }
+        }
+
+        function sendToDiscord(taskName, link) {
+            const message = {
+                content: `<@&1316346178220064838> <@1294127610233880601>\nНовое выполнение задания!\nПользователь: ${user.discordId}\nЗадание: ${taskName}\nСсылка: ${link}`
+            };
+            fetch("https://discord.com/api/webhooks/1395705773270765608/UpWvEYWZ-cbNIsQvYBFfJ9L4LgL1j398F2klyHqNcCnKwHwDB2BHvNu7l2RJPf6o30pT", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(message)
+            }).then(response => {
+                if (response.ok) alert("Скрин отправлен в Discord!");
+                else alert("Ошибка при отправке в Discord.");
+            }).catch(() => alert("Ошибка сети."));
+        }
+
+        async function sendCaseResultToDiscord(caseName, result, item, task = null) {
+            let content = `<@${user.discordId}> крутанул кейс **${caseName}** и ${result}: ${item}!`;
+            if (task) {
+                content = `<@${user.discordId}> крутанул кейс **${caseName}** и выиграл: Дополнительное задание: ${task.task} (+${task.points} баллов)!`;
+            }
+            const message = { content };
+            fetch("https://discord.com/api/webhooks/1395705773270765608/UpWvEYWZ-cbNIsQvYBFfJ9L4LgL1j398F2klyHqNcCnKwHwDB2BHvNu7l2RJPf6o30pT", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(message)
+            }).then(response => {
+                if (!response.ok) console.warn("Ошибка при отправке результата кейса в Discord.");
+            }).catch(() => console.warn("Ошибка сети при отправке результата кейса."));
+        }
+
+        async function getTask() {
+            const now = new Date();
+            const today = now.toISOString().split('T')[0];
+            if (user.lastExtraTaskDate !== today && (user.extraTasksToday < 2 || user.isAdmin)) {
+                let allTasks = [];
+                try {
+                    const response = await fetch('tasks.json');
+                    if (response.ok) {
+                        allTasks = await response.json();
+                    }
+                } catch (error) {
+                    console.warn("Ошибка загрузки tasks.json для доп. задания:", error);
+                    allTasks = tasks;
+                }
+
+                const currentTaskIds = tasks.map(t => t.id);
+                const completedTaskIds = completedTasksToday.map(ct => ct.id);
+                const availableTasks = allTasks.filter(t => !currentTaskIds.includes(t.id) && !completedTaskIds.includes(t.id));
+
+                if (availableTasks.length > 0) {
+                    extraTask = availableTasks[Math.floor(Math.random() * availableTasks.length)];
+                    updateTasks();
+                    if (!user.isAdmin) {
+                        user.extraTasksToday++;
+                        user.lastExtraTaskDate = today;
+                    }
+                    saveUserData();
+                    alert("Новое дополнительное задание получено! Проверьте секцию заданий.");
+                } else {
+                    alert("Нет доступных дополнительных заданий!");
+                }
+            } else {
+                alert("Лимит дополнительных заданий на сегодня исчерпан (2 в день)!");
+            }
+        }
+
+        async function addExtraTaskFromCase() {
+            let allTasks = [];
+            try {
+                const response = await fetch('tasks.json');
+                if (response.ok) {
+                    allTasks = await response.json();
+                }
+            } catch (error) {
+                console.warn("Ошибка загрузки tasks.json для кейса:", error);
+                allTasks = tasks;
+            }
+
+            const currentTaskIds = tasks.map(t => t.id);
+            const completedTaskIds = completedTasksToday.map(ct => ct.id);
+            const availableTasks = allTasks.filter(t => !currentTaskIds.includes(t.id) && !completedTaskIds.includes(t.id));
+
+            if (availableTasks.length > 0) {
+                extraTask = availableTasks[Math.floor(Math.random() * availableTasks.length)];
+                updateTasks();
+                saveUserData();
+                return extraTask;
+            } else {
+                return null;
+            }
+        }
+
+        async function replaceTask() {
+            const now = new Date();
+            const today = now.toISOString().split('T')[0];
+            if (user.lastReplaceDate !== today && (user.taskReplaces < 1 || user.isAdmin)) {
+                const completedTaskIds = completedTasksToday.map(ct => ct.id);
+                const completedTasks = tasks.filter(t => completedTaskIds.includes(t.id));
+
+                let allTasks = [];
+                try {
+                    const response = await fetch('tasks.json');
+                    if (response.ok) {
+                        allTasks = await response.json();
+                    }
+                } catch (error) {
+                    console.warn("Ошибка загрузки tasks.json при замене:", error);
+                    allTasks = tasks;
+                }
+
+                const availableTasks = allTasks.filter(t => !completedTaskIds.includes(t.id));
+                const remainingCount = 6 - completedTasks.length;
+                const newTasks = availableTasks.sort(() => Math.random() - 0.5).slice(0, remainingCount);
+
+                tasks = [...completedTasks, ...newTasks];
+
+                updateTasks();
+                if (!user.isAdmin) {
+                    user.taskReplaces++;
+                    user.lastReplaceDate = today;
+                }
+                saveUserData();
+                alert("Невыполненные задания заменены!");
+            } else {
+                alert("Бесплатная замена заданий на сегодня исчерпана!");
+            }
+        }
+
+        function viewCase(caseId) {
+            const c = cases.find(c => c.id === caseId);
+            document.getElementById("caseViewTitle").textContent = c.name;
+            document.getElementById("caseViewImage").src = c.image;
+            document.getElementById("caseViewCost").textContent = c.cost;
+            const itemsList = document.getElementById("caseViewItems");
+            itemsList.innerHTML = "";
+            c.items.forEach(item => {
+                const li = document.createElement("li");
+                li.textContent = item;
+                itemsList.appendChild(li);
+            });
+            const spinButton = document.getElementById("caseViewSpin");
+            spinButton.disabled = user.points < c.cost;
+            spinButton.onclick = () => spinCase(caseId);
+            document.getElementById("caseViewModal").style.display = "flex";
+        }
+
+        async function spinCase(caseId) {
+            const c = cases.find(c => c.id === caseId);
+            if (user.points >= c.cost) {
+                user.points -= c.cost;
+                updatePoints();
+                const caseDiv = document.querySelector(`#cases > div:nth-child(${caseId})`);
+                caseDiv.classList.add("case-spin");
+                setTimeout(async () => {
+                    caseDiv.classList.remove("case-spin");
+                    const win = Math.random() * 100 <= c.winRate;
+                    const itemIndex = Math.floor(Math.random() * c.items.length);
+                    const item = c.items[itemIndex];
+                    let resultMessage = `Вы ${win ? "выиграли" : "проиграли"}! Предмет: ${item}`;
+                    let task = null;
+
+                    if (c.id === 2 && win) {
+                        task = await addExtraTaskFromCase();
+                        if (task) {
+                            resultMessage = `Вы выиграли! Дополнительное задание: ${task.task} (+${task.points} баллов)`;
+                        } else {
+                            resultMessage = `Вы выиграли! Но новых заданий нет.`;
+                        }
+                    }
+
+                    showModal(resultMessage);
+                    sendCaseResultToDiscord(c.name, win ? "выиграл" : "проиграл", item, task);
+                    closeCaseViewModal();
+                }, 1000);
+            } else {
+                alert("Недостаточно баллов для кейса!");
+            }
+        }
+
+        function updatePoints() {
+            document.getElementById("points").textContent = user.points;
+            document.getElementById("completedTasks").textContent = user.completedTasks;
+            const playerIndex = leaderboard.findIndex(p => p.discordId === user.discordId);
+            if (playerIndex >= 0) {
+                leaderboard[playerIndex].points = user.points;
+                leaderboard[playerIndex].completedTasks = user.completedTasks;
+            } else {
+                leaderboard.push({ discordId: user.discordId, points: user.points, completedTasks: user.completedTasks });
+            }
+            updateLeaderboard();
+            saveUserData();
+        }
+
+        function updateTask() {
+            const taskId = parseInt(document.getElementById("taskSelect").value);
+            const newTaskName = document.getElementById("newTaskName").value;
+            const newTaskCategory = document.getElementById("newTaskCategory").value;
+            const newPoints = parseInt(document.getElementById("newPoints").value);
+            const task = tasks.find(t => t.id === taskId) || (extraTask && extraTask.id === taskId ? extraTask : null);
+            if (task) {
+                if (newTaskName) task.task = newTaskName;
+                if (newTaskCategory) task.category = newTaskCategory;
+                if (newPoints) task.points = newPoints;
+                updateTasks();
+                if (task === extraTask) {
+                    updateTasks();
+                }
+                // Обновляем предметы кейса с доп. заданиями
+                cases[1].items = tasks.map(t => t.task);
+                updateCases();
+                alert(`Задание обновлено: ${task.task}`);
+            }
+        }
+
+        function updateCase() {
+            const caseId = parseInt(document.getElementById("caseSelect").value);
+            const caseName = document.getElementById("caseName").value;
+            const caseCost = parseInt(document.getElementById("caseCost").value);
+            const caseWinRate = parseInt(document.getElementById("caseWinRate").value);
+            const caseItems = document.getElementById("caseItems").value.split(',').map(item => item.trim());
+            const c = cases.find(c => c.id === caseId);
+            if (c) {
+                if (caseName) c.name = caseName;
+                if (caseCost >= 0) c.cost = caseCost;
+                if (caseWinRate >= 0) c.winRate = caseWinRate;
+                if (caseItems.length > 0 && caseId !== 2) c.items = caseItems; // Кейс с доп. заданиями не редактируем предметы
+                updateCases();
+                alert(`Кейс обновлен: ${c.name}`);
+            }
+        }
+
+        function resetExtraTaskLimit() {
+            const selectedUsername = document.getElementById("playerSelect").value;
+            const userData = JSON.parse(localStorage.getItem('userData_' + selectedUsername)) || {};
+            userData.extraTasksToday = 0;
+            userData.lastExtraTaskDate = null;
+            localStorage.setItem('userData_' + selectedUsername, JSON.stringify(userData));
+            if (selectedUsername === user.username) {
+                user.extraTasksToday = 0;
+                user.lastExtraTaskDate = null;
+                saveUserData();
+            }
+            alert(`Лимит дополнительных заданий сброшен для ${selectedUsername}`);
+        }
+
+        function adjustUserPoints() {
+            const selectedUsername = document.getElementById("playerSelect").value;
+            const points = parseInt(document.getElementById("userPoints").value);
+            if (selectedUsername === user.username) {
+                user.points += points;
+                user.dailyPoints += points;
+                updatePoints();
+            } else {
+                const playerIndex = leaderboard.findIndex(p => p.discordId === JSON.parse(localStorage.getItem('user_' + selectedUsername)).discord);
+                if (playerIndex >= 0) {
+                    leaderboard[playerIndex].points += points;
+                    updateLeaderboard();
+                }
+            }
+            alert(`Баллы изменены на ${points} для ${selectedUsername}`);
+        }
+
+        function logout() {
+            localStorage.removeItem('loggedInUser');
+            localStorage.removeItem('userData_' + user.username);
+            localStorage.removeItem('lastAutoPoints_' + user.username);
+            localStorage.removeItem('lastDate_' + user.username);
+            alert("Выход выполнен!");
+            window.location.href = 'index.html';
+        }
+
+        function scrollToCases() {
+            document.getElementById("casesSection").scrollIntoView({ behavior: "smooth" });
+        }
+
+        function showModal(message) {
+            document.getElementById("caseResult").textContent = message;
+            document.getElementById("caseModal").style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById("caseModal").style.display = "none";
+        }
+
+        function closeCaseViewModal() {
+            document.getElementById("caseViewModal").style.display = "none";
+        }
+
+        init();
+    </script>
+</body>
+</html>
